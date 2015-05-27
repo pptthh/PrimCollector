@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Application
+	xmlns:fx="http://ns.adobe.com/mxml/2009" 
+	xmlns:s="library://ns.adobe.com/flex/spark">
+	
+	<s:layout>
+		<s:BasicLayout/>
+	</s:layout>
+	
+	<fx:Script>
+		<![CDATA[
+			import flash.utils.getTimer;
+			
+			import org.code.vo.Prim;
+			import org.code.vo.list.VectorUintList;
+			
+			private const primsData:Vector.<Prim> = new Vector.<Prim>();
+			private const prims:Vector.<uint> = new Vector.<uint>();
+			private var lastCalculatedValue:uint = 2;
+			
+			override protected function createChildren():void
+			{
+				super.createChildren();
+				
+				addEventListener(Event.EXIT_FRAME, handleExitFrame, false, 0, true);
+				addEventListener(MouseEvent.CLICK, updateDisplay, false, 0, true);
+				prims.push(2);
+				primsData.push(new Prim(2, 0, 0));
+			}
+			
+			private function handleExitFrame(event:Event):void
+			{
+				const start:uint = getTimer();
+				while(getTimer() - start < 1)
+					isPrim(++ lastCalculatedValue);
+			}
+			
+			private function isPrim(x:uint):void
+			{
+				const sqX:uint = Math.floor(Math.sqrt(x));
+				const prims:Vector.<uint> = this.prims;
+				var i:uint = 0;
+				while (
+					i < sqX &&
+					x % prims[i] != 0
+				)
+					++ i;
+				if (i >= sqX)
+				{
+					i = primsData.length;
+					prims.push(x);
+					primsData.push(new Prim(x, i, x - primsData[i - 1].value));
+					trace('		',x); 
+				}
+			}
+			
+			/*
+			private const workers:Vector.<Worker> = function ():Vector.<Worker>
+			{
+				const list:Vector.<Worker> = new Vector.<Worker>(4,true);
+				var i = list.length;
+				while (i -- > 0)
+					list[i] = new Worker();
+				
+				return list;
+			}/**/
+			
+			private function updateDisplay(event:Event):void
+			{
+				list.dataProvider = new VectorUintList(prims);
+			}
+		]]>
+	</fx:Script>
+
+	<s:List
+		id="list"
+		height="100%"
+		width="100%"
+		>
+		<s:itemRenderer>
+			<fx:Component>
+				<s:ItemRenderer>
+					<s:Label id="nameLabel" text="{data}\t{}" top="5" left="5" right="5" />
+				</s:ItemRenderer>
+			</fx:Component>
+		</s:itemRenderer>
+	</s:List>
+
+	
+</s:Application>

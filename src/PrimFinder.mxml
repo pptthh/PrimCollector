@@ -9,14 +9,12 @@
 	
 	<fx:Script>
 		<![CDATA[
-			import flash.utils.getTimer;
-			
 			import org.code.vo.Prim;
-			import org.code.vo.list.VectorUintList;
+			import org.code.vo.list.VectorList;
 			
-			private const primsData:Vector.<Prim> = new Vector.<Prim>();
+			private const primData:Vector.<Prim> = new Vector.<Prim>();
 			private const prims:Vector.<uint> = new Vector.<uint>();
-			private var lastCalculatedValue:uint = 2;
+			private var lastCalculatedValue:uint;
 			
 			override protected function createChildren():void
 			{
@@ -24,22 +22,27 @@
 				
 				addEventListener(Event.EXIT_FRAME, handleExitFrame, false, 0, true);
 				addEventListener(MouseEvent.CLICK, updateDisplay, false, 0, true);
-				prims.push(2);
-				primsData.push(new Prim(2, 0, 0));
+				lastCalculatedValue = 2;
+				prims.push(lastCalculatedValue);
+				primData.push(new Prim(0, 2, 0));
+				isPrim(++ lastCalculatedValue);
 			}
 			
 			private function handleExitFrame(event:Event):void
 			{
-				const start:uint = getTimer();
-				while(getTimer() - start < 1)
-					isPrim(++ lastCalculatedValue);
+//				const start:uint = getTimer();
+//				while(getTimer() - start < 10)
+					lastCalculatedValue += 2;
+					isPrim(lastCalculatedValue);
+					if (lastCalculatedValue == uint.MAX_VALUE)
+						removeEventListener(Event.EXIT_FRAME, handleExitFrame);
 			}
 			
 			private function isPrim(x:uint):void
 			{
 				const sqX:uint = Math.floor(Math.sqrt(x));
 				const prims:Vector.<uint> = this.prims;
-				var i:uint = 0;
+				var i:uint = 1;
 				while (
 					i < sqX &&
 					x % prims[i] != 0
@@ -47,32 +50,33 @@
 					++ i;
 				if (i >= sqX)
 				{
-					i = primsData.length;
+					i = primData.length;
 					prims.push(x);
-					primsData.push(new Prim(x, i, x - primsData[i - 1].value));
-					trace('		',x); 
+					trace('		i:',i,'		v:',x,'		d',x - primData[i - 1].value); 
+					primData.push(
+						new Prim(
+							i,
+							x, 
+							x - primData[i - 1].value
+						)
+					);
 				}
 			}
 			
-			/*
-			private const workers:Vector.<Worker> = function ():Vector.<Worker>
-			{
-				const list:Vector.<Worker> = new Vector.<Worker>(4,true);
-				var i = list.length;
-				while (i -- > 0)
-					list[i] = new Worker();
-				
-				return list;
-			}/**/
-			
 			private function updateDisplay(event:Event):void
 			{
-				list.dataProvider = new VectorUintList(prims);
+				//list.dataProvider = new VectorUintList(prims);
+//				const collection:Vector.<Object> = primData;
+				const collection:Vector.<Object> = primData as Vector.<Object>;
+				list.dataProvider = new VectorList(
+					collection,
+					Prim
+				);
 			}
 		]]>
 	</fx:Script>
 
-	<s:List
+	<s:ListBase
 		id="list"
 		height="100%"
 		width="100%"
@@ -80,11 +84,11 @@
 		<s:itemRenderer>
 			<fx:Component>
 				<s:ItemRenderer>
-					<s:Label id="nameLabel" text="{data}\t{}" top="5" left="5" right="5" />
+					<s:Label id="nameLabel" text="{data}	{}" top="5" left="5" right="5" />
 				</s:ItemRenderer>
 			</fx:Component>
 		</s:itemRenderer>
-	</s:List>
+	</s:ListBase>
 
 	
 </s:Application>

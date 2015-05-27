@@ -1,6 +1,6 @@
 package org.code.vo
 {
-	public final class Prim
+	public final class Prim extends Object
 	{
 		private var _id:uint
 		public function get id():uint		{return _id;}

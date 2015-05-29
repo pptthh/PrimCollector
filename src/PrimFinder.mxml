@@ -13,6 +13,7 @@
 			
 			import org.code.vo.Prim;
 			import org.code.vo.list.VectorPrimList;
+			import org.code.workers.BgWorkerPrimFinder;
 			
 			private const primData:Vector.<Prim> = new Vector.<Prim>();
 			private const prims:Vector.<uint> = new Vector.<uint>();
@@ -101,6 +102,27 @@
 			private function updateDisplay(event:Event):void
 			{
 				list.dataProvider = new VectorPrimList(primData);
+			}
+			
+			private function createWorker():void
+			{
+				// create the background worker
+				var workerBytes:ByteArray = new BgWorkerPrimFinder();
+				var bgWorker:Worker = WorkerDomain.current.createWorker(workerBytes);
+				
+				// listen for worker state changes to know when the worker is running
+				bgWorker.addEventListener(Event.WORKER_STATE, workerStateHandler);
+				
+				// set up communication between workers using 
+				// setSharedProperty(), createMessageChannel(), etc.
+				// ... (not shown)
+				
+				bgWorker.start();
+			}
+			
+			private function workerStateHandler(event:Event):void
+			{
+				trace(event.type);
 			}
 		]]>
 	</fx:Script>

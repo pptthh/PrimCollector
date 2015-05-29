@@ -9,8 +9,10 @@
 	
 	<fx:Script>
 		<![CDATA[
+			import flash.utils.setTimeout;
+			
 			import org.code.vo.Prim;
-			import org.code.vo.list.VectorList;
+			import org.code.vo.list.VectorPrimList;
 			
 			private const primData:Vector.<Prim> = new Vector.<Prim>();
 			private const prims:Vector.<uint> = new Vector.<uint>();
@@ -20,12 +22,39 @@
 			{
 				super.createChildren();
 				
+				setTimeout(
+					function ():void
+					{
+						trace('stop');
+						removeEventListener(Event.EXIT_FRAME, handleExitFrame);
+						updateDisplay(null);
+					},
+					60000
+				);
+				
 				addEventListener(Event.EXIT_FRAME, handleExitFrame, false, 0, true);
 				addEventListener(MouseEvent.CLICK, updateDisplay, false, 0, true);
 				lastCalculatedValue = 2;
 				prims.push(lastCalculatedValue);
 				primData.push(new Prim(0, 2, 0));
 				isPrim(++ lastCalculatedValue);
+
+				
+				
+				trace('	WorkerDomain.current:',		WorkerDomain.current);
+				trace('	WorkerDomain.isSupported:',	WorkerDomain.isSupported);
+				//trace('	WorkerDomain.listWorkers:',	);
+				
+				if (!WorkerDomain.isSupported)
+					return;
+				
+				const byteArray:ByteArray = new ByteArray();
+				
+				const workerDomain:WorkerDomain = WorkerDomain.current;
+				const worker:Worker = workerDomain.createWorker(byteArray);
+				
+				trace('	WorkerDomain.listWorkers:',	workerDomain.listWorkers);
+				trace('	worker:',	worker);
 			}
 			
 			private function handleExitFrame(event:Event):void
@@ -52,12 +81,18 @@
 				{
 					i = primData.length;
 					prims.push(x);
-					trace('		i:',i,'		v:',x,'		d',x - primData[i - 1].value); 
+					trace(
+						'	i:',i,
+						'		v:',x,
+						'		d',x - Prim(primData[i - 1]).value - 1,
+						'		x',Prim.prevMaxDistance,
+						'		c',Prim.prevMaxDistanceCount
+					); 
 					primData.push(
 						new Prim(
 							i,
 							x, 
-							x - primData[i - 1].value
+							x - primData[i - 1].value - 1
 						)
 					);
 				}
@@ -65,18 +100,12 @@
 			
 			private function updateDisplay(event:Event):void
 			{
-				//list.dataProvider = new VectorUintList(prims);
-//				const collection:Vector.<Object> = primData;
-				const collection:Vector.<Object> = primData as Vector.<Object>;
-				list.dataProvider = new VectorList(
-					collection,
-					Prim
-				);
+				list.dataProvider = new VectorPrimList(primData);
 			}
 		]]>
 	</fx:Script>
 
-	<s:ListBase
+	<s:List
 		id="list"
 		height="100%"
 		width="100%"
@@ -84,11 +113,32 @@
 		<s:itemRenderer>
 			<fx:Component>
 				<s:ItemRenderer>
-					<s:Label id="nameLabel" text="{data}	{}" top="5" left="5" right="5" />
+					<s:HGroup>
+						<s:Label
+							id="primId"
+							text="{data.id}"
+							width="100"
+							/>
+						<s:Label
+							id="primValue"
+							text="{data.value}"
+							width="100"
+							/>
+						<s:Label
+							id="primDistance"
+							text="{data.distance}"
+							width="100"
+							/>
+						<s:Label
+							id="primMax"
+							text="{data.maxDistance}"
+							width="100"
+							/>
+					</s:HGroup>
 				</s:ItemRenderer>
 			</fx:Component>
 		</s:itemRenderer>
-	</s:ListBase>
+	</s:List>
 
 	
 </s:Application>

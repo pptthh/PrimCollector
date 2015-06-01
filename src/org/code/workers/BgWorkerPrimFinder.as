@@ -7,6 +7,7 @@ package org.code.workers
 	{
 		public function BgWorkerPrimFinder(target:IEventDispatcher=null)
 		{
+			trace('		BgWorkerPrimFinder');
 			super(target);
 		}
 	}

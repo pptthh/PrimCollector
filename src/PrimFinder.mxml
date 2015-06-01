@@ -13,7 +13,6 @@
 			
 			import org.code.vo.Prim;
 			import org.code.vo.list.VectorPrimList;
-			import org.code.workers.BgWorkerPrimFinder;
 			
 			private const primData:Vector.<Prim> = new Vector.<Prim>();
 			private const prims:Vector.<uint> = new Vector.<uint>();
@@ -58,16 +57,57 @@
 				trace('	worker:',	worker);
 				
 				createWorker();
+				
+				const workerLoader:URLLoader = new URLLoader();
+				workerLoader.dataFormat = URLLoaderDataFormat.BINARY;
+				workerLoader.addEventListener(Event.COMPLETE, workerLoadComplete);
+				workerLoader.addEventListener(IOErrorEvent.IO_ERROR, workerLoadComplete);
+				workerLoader.load(
+					new URLRequest(
+						"org/code/workers/WorkerTest.swf"
+					)
+				);
+			}
+			
+			private function workerLoadComplete(event:Event):void
+			{
+				trace('workerLoadComplete',event.type, event.target)
+				if (event.type === IOErrorEvent.IO_ERROR)
+					return removeEventListener(Event.EXIT_FRAME, handleExitFrame);
+				
+				removeEventListener(Event.EXIT_FRAME, handleExitFrame);
+				const bgWorkerBytes:ByteArray = event.target.data as ByteArray; 
+				const bgWorker:Worker = WorkerDomain.current.createWorker(bgWorkerBytes);
+				bgWorker.addEventListener(Event.WORKER_STATE, handleBgWorkerState, false, 0, true);
+				bgWorker.start();
+
+				const bgWorker2:Worker = WorkerDomain.current.createWorker(bgWorkerBytes);
+				bgWorker2.addEventListener(Event.WORKER_STATE, handleBgWorkerState, false, 0, true);
+				bgWorker2.start();
+			}
+			
+			private function handleBgWorkerState(event:Event):void
+			{
+				trace('	handleBgWorkerState',event.type, event.target);
 			}
 			
 			private function handleExitFrame(event:Event):void
 			{
-//				const start:uint = getTimer();
-//				while(getTimer() - start < 10)
-					lastCalculatedValue += 2;
-					isPrim(lastCalculatedValue);
-					if (lastCalculatedValue == uint.MAX_VALUE)
-						removeEventListener(Event.EXIT_FRAME, handleExitFrame);
+				const start:uint = getTimer();
+				try
+				{
+//					while(getTimer() - start < 10)
+					{
+						lastCalculatedValue += 2;
+						isPrim(lastCalculatedValue)
+						if (lastCalculatedValue == uint.MAX_VALUE)
+							removeEventListener(Event.EXIT_FRAME, handleExitFrame);
+					}
+				}
+				catch(e:Error)
+				{
+					trace(e.getStackTrace())
+				}
 			}
 			
 			private function isPrim(x:uint):void
@@ -109,7 +149,11 @@
 			private function createWorker():void
 			{
 				// create the background worker
-				var workerBytes:ByteArray = new BgWorkerPrimFinder as ByteArray;
+				trace('createWorker', this.loaderInfo);
+				if (!this.loaderInfo)
+					return;
+				const workerBytes:ByteArray = this.loaderInfo.bytes;
+				//const workerBytes:ByteArray = new BgWorkerPrimFinder()// as ByteArray;
 				var bgWorker:Worker = WorkerDomain.current.createWorker(workerBytes);
 				
 				// listen for worker state changes to know when the worker is running

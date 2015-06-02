@@ -15,6 +15,10 @@
 			import org.code.vo.Prim;
 			import org.code.vo.list.VectorPrimList;
 			
+			private const noOfWorkers:uint = 8;
+			
+			private const txChannels:Vector.<MessageChannel> = new Vector.<MessageChannel>();
+
 			private const primData:Vector.<Prim> = new Vector.<Prim>();
 			private const prims:Vector.<uint> = new Vector.<uint>();
 			private var lastCalculatedValue:uint;
@@ -79,7 +83,7 @@
 				Worker.current.setSharedProperty('prims', prims);
 
 				const bgWorkerBytes:ByteArray = event.target.data as ByteArray;
-				const noOfWorkers:uint = 8
+				const noOfWorkers:uint = noOfWorkers;
 				var i:uint = noOfWorkers;
 				while (i -- > 0)
 					createBackgroundWorker(bgWorkerBytes, noOfWorkers - i - 1);
@@ -100,10 +104,12 @@
 			{
 				trace('workerLoadComplete	bgWorker init    ','	timer:', getTimer());
 				const bgWorker:Worker = WorkerDomain.current.createWorker(bgWorkerBytes);
-				bgWorker.addEventListener(Event.WORKER_STATE, handleBgWorkerState, false, 0, true);
+				const txCh:MessageChannel = Worker.current.createMessageChannel(bgWorker);
 				
+				bgWorker.addEventListener(Event.WORKER_STATE, handleBgWorkerState, false, 0, true);
 				bgWorker.setSharedProperty('prims', prims);
 				bgWorker.setSharedProperty('workerId',	creationId);
+				bgWorker.setSharedProperty('rxChannel' + creationId, txCh);
 				
 				trace('workerLoadComplete	bgWorker starting','	timer:', getTimer());
 				bgWorker.start();

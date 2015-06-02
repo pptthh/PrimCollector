@@ -9,6 +9,7 @@
 	
 	<fx:Script>
 		<![CDATA[
+			import flash.utils.getTimer;
 			import flash.utils.setTimeout;
 			
 			import org.code.vo.Prim;
@@ -25,7 +26,7 @@
 				setTimeout(
 					function ():void
 					{
-						trace('stop');
+						trace('stop', arguments.callee);
 						removeEventListener(Event.EXIT_FRAME, handleExitFrame);
 						updateDisplay(null);
 					},
@@ -39,8 +40,6 @@
 				primData.push(new Prim(0, 2, 0));
 				isPrim(++ lastCalculatedValue);
 
-				
-				
 				trace('	WorkerDomain.current:',		WorkerDomain.current);
 				trace('	WorkerDomain.isSupported:',	WorkerDomain.isSupported);
 				//trace('	WorkerDomain.listWorkers:',	);
@@ -71,27 +70,58 @@
 			
 			private function workerLoadComplete(event:Event):void
 			{
-				trace('workerLoadComplete',event.type, event.target)
+				trace('workerLoadComplete',event.type, event.target);
 				if (event.type === IOErrorEvent.IO_ERROR)
 					return removeEventListener(Event.EXIT_FRAME, handleExitFrame);
 				
 				removeEventListener(Event.EXIT_FRAME, handleExitFrame);
-				const bgWorkerBytes:ByteArray = event.target.data as ByteArray; 
+				
+				Worker.current.setSharedProperty('prims', prims);
+
+				const bgWorkerBytes:ByteArray = event.target.data as ByteArray;
+				const noOfWorkers:uint = 8
+				var i:uint = noOfWorkers;
+				while (i -- > 0)
+					createBackgroundWorker(bgWorkerBytes, noOfWorkers - i - 1);
+				
+				const workers:Vector.<Worker> = WorkerDomain.current.listWorkers();
+				i = workers.length
+				
+				trace('list prims:');
+				trace(prims);
+				
+				while (i -- > 0)
+				{
+					trace(workers[i].getSharedProperty('prims'));
+				}
+			}
+			
+			private function createBackgroundWorker(bgWorkerBytes:ByteArray, creationId:uint):void
+			{
+				trace('workerLoadComplete	bgWorker init    ','	timer:', getTimer());
 				const bgWorker:Worker = WorkerDomain.current.createWorker(bgWorkerBytes);
 				bgWorker.addEventListener(Event.WORKER_STATE, handleBgWorkerState, false, 0, true);
+				
+				bgWorker.setSharedProperty('prims', prims);
+				bgWorker.setSharedProperty('workerId',	creationId);
+				
+				trace('workerLoadComplete	bgWorker starting','	timer:', getTimer());
 				bgWorker.start();
-
-				const bgWorker2:Worker = WorkerDomain.current.createWorker(bgWorkerBytes);
-				bgWorker2.addEventListener(Event.WORKER_STATE, handleBgWorkerState, false, 0, true);
-				bgWorker2.start();
+				trace('workerLoadComplete	bgWorker started ','	timer:', getTimer());
+				
+				handleExitFrame()
 			}
 			
 			private function handleBgWorkerState(event:Event):void
 			{
-				trace('	handleBgWorkerState',event.type, event.target);
+				const w:Worker = Worker(event.target);
+				trace('		handleBgWorkerState',event.type, w.state,'	timer:', getTimer());
+				trace('		list workers:', WorkerDomain.current.listWorkers());
+				trace('		list prims:');
+				trace(w.getSharedProperty('prims'));
 			}
 			
-			private function handleExitFrame(event:Event):void
+			private function handleExitFrame(event:Event = null):void
 			{
 				const start:uint = getTimer();
 				try
@@ -208,5 +238,8 @@
 		</s:itemRenderer>
 	</s:List>
 
-	
+	<fx:Style>
+		@namespace s "library://ns.adobe.com/flex/spark";
+		
+	</fx:Style>
 </s:Application>

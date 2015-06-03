@@ -7,6 +7,10 @@
 		<s:BasicLayout/>
 	</s:layout>
 	
+	<fx:Style>
+		@namespace s "library://ns.adobe.com/flex/spark";
+	</fx:Style>
+	
 	<fx:Script>
 		<![CDATA[
 			import flash.utils.getTimer;
@@ -14,10 +18,12 @@
 			
 			import org.code.vo.Prim;
 			import org.code.vo.list.VectorPrimList;
+			import org.code.workers.SharedProperties;
 			
-			private const noOfWorkers:uint = 8;
+			private static const NO_OF_WORKERS:uint = 7;
 			
-			private const txChannels:Vector.<MessageChannel> = new Vector.<MessageChannel>();
+			private const txChannels:Vector.<MessageChannel> = new Vector.<MessageChannel>(NO_OF_WORKERS,true);
+			private const rxChannels:Vector.<MessageChannel> = new Vector.<MessageChannel>(NO_OF_WORKERS,true);
 
 			private const primData:Vector.<Prim> = new Vector.<Prim>();
 			private const prims:Vector.<uint> = new Vector.<uint>();
@@ -43,88 +49,170 @@
 				prims.push(lastCalculatedValue);
 				primData.push(new Prim(0, 2, 0));
 				isPrim(++ lastCalculatedValue);
-
-				trace('	WorkerDomain.current:',		WorkerDomain.current);
-				trace('	WorkerDomain.isSupported:',	WorkerDomain.isSupported);
-				//trace('	WorkerDomain.listWorkers:',	);
-				
-				if (!WorkerDomain.isSupported)
-					return;
-				
-				const byteArray:ByteArray = new ByteArray();
-				
-				const workerDomain:WorkerDomain = WorkerDomain.current;
-				const worker:Worker = workerDomain.createWorker(byteArray);
-				
-				trace('	WorkerDomain.listWorkers:',	workerDomain.listWorkers);
-				trace('	worker:',	worker);
-				
-				createWorker();
-				
-				const workerLoader:URLLoader = new URLLoader();
-				workerLoader.dataFormat = URLLoaderDataFormat.BINARY;
-				workerLoader.addEventListener(Event.COMPLETE, workerLoadComplete);
-				workerLoader.addEventListener(IOErrorEvent.IO_ERROR, workerLoadComplete);
-				workerLoader.load(
-					new URLRequest(
-						"org/code/workers/WorkerTest.swf"
-					)
-				);
 			}
 			
-			private function workerLoadComplete(event:Event):void
-			{
-				trace('workerLoadComplete',event.type, event.target);
-				if (event.type === IOErrorEvent.IO_ERROR)
-					return removeEventListener(Event.EXIT_FRAME, handleExitFrame);
-				
-				removeEventListener(Event.EXIT_FRAME, handleExitFrame);
-				
-				Worker.current.setSharedProperty('prims', prims);
-
-				const bgWorkerBytes:ByteArray = event.target.data as ByteArray;
-				const noOfWorkers:uint = noOfWorkers;
-				var i:uint = noOfWorkers;
-				while (i -- > 0)
-					createBackgroundWorker(bgWorkerBytes, noOfWorkers - i - 1);
-				
-				const workers:Vector.<Worker> = WorkerDomain.current.listWorkers();
-				i = workers.length
-				
-				trace('list prims:');
-				trace(prims);
-				
-				while (i -- > 0)
+//			override public function initialize():void
+//			{
+//				if (initialized)
+//					return;
+//				initWorkers();
+//				super.initialize();
+//			}
+			
+//			private function createWorker():void
+//			{
+//				// create the background worker
+//				if (!this.loaderInfo)
+//					return trace('	createWorker failed');
+//				trace('	createWorker	', this.loaderInfo);
+//				
+//				const workerBytes:ByteArray = this.loaderInfo.bytes;
+//				//const workerBytes:ByteArray = new BgWorkerPrimFinder()// as ByteArray;
+//				var bgWorker:Worker = WorkerDomain.current.createWorker(workerBytes);
+//				
+//				// listen for worker state changes to know when the worker is running
+//				bgWorker.addEventListener(Event.WORKER_STATE, workerStateHandler);
+//				
+//				// set up communication between workers using 
+//				// setSharedProperty(), createMessageChannel(), etc.
+//				// ... (not shown)
+//				
+//				bgWorker.start();
+//			}
+			
+			private const workersInitialize:Boolean = (
+				function ():Boolean
 				{
-					trace(workers[i].getSharedProperty('prims'));
+					trace('	WorkerDomain.current:',		WorkerDomain.current);
+					trace('	WorkerDomain.isSupported:',	WorkerDomain.isSupported);
+					//trace('	WorkerDomain.listWorkers:',	);
+					
+					if (!WorkerDomain.isSupported)
+						return false;
+					
+//					createWorker();
+//					
+//					const byteArray:ByteArray = new ByteArray();
+//					
+//					const workerDomain:WorkerDomain = WorkerDomain.current;
+//					const worker:Worker = workerDomain.createWorker(byteArray);
+//					
+//					trace('	WorkerDomain.listWorkers:',	workerDomain.listWorkers);
+//					trace('	worker:',	worker);
+					
+					const workerLoader:URLLoader = new URLLoader();
+					workerLoader.dataFormat = URLLoaderDataFormat.BINARY;
+					
+					workerLoader.addEventListener(Event.COMPLETE, workerLoadComplete, false, 0, true);
+					workerLoader.addEventListener(IOErrorEvent.IO_ERROR, workerLoadComplete, false, 0, true);
+					
+					workerLoader.load(
+						new URLRequest(
+							"org/code/workers/WorkerTest.swf"
+						)
+					);
+					
+					return true;
+					
+					function workerLoadComplete(event:Event):void
+					{
+						trace('workerLoadComplete',event.type, event.target);
+						
+						const workerLoader:URLLoader = URLLoader(event.target);
+						workerLoader.removeEventListener(Event.COMPLETE, workerLoadComplete);
+						workerLoader.removeEventListener(IOErrorEvent.IO_ERROR, workerLoadComplete);
+						
+						if (event.type === IOErrorEvent.IO_ERROR)
+							return removeEventListener(Event.EXIT_FRAME, handleExitFrame);
+						
+						removeEventListener(Event.EXIT_FRAME, handleExitFrame);
+						
+						Worker.current.setSharedProperty(SharedProperties.PRIMS, prims);
+						
+						const bgWorkerBytes:ByteArray = event.target.data as ByteArray;
+						const noOfWorkers:uint = PrimFinder.NO_OF_WORKERS;
+						var i:uint = noOfWorkers;
+						while (i -- > 0)
+							createBackgroundWorker(bgWorkerBytes, noOfWorkers - i - 1);
+						
+						const workers:Vector.<Worker> = WorkerDomain.current.listWorkers();
+						i = workers.length
+						
+						trace('list prims:');
+						trace(prims);
+						
+						while (i -- > 0)
+						{
+							trace(workers[i].getSharedProperty(SharedProperties.PRIMS));
+						}
+					}
+					
+					function createBackgroundWorker(bgWorkerBytes:ByteArray, creationId:uint):void
+					{
+						trace('	workerLoadComplete	bgWorker init    ','	timer:', getTimer());
+						const bgWorker:Worker = WorkerDomain.current.createWorker(bgWorkerBytes);
+						const txCh:MessageChannel = Worker.current.createMessageChannel(bgWorker);
+
+						bgWorker.addEventListener(Event.WORKER_STATE, handleBgWorkerState, false, 0, true);
+						bgWorker.setSharedProperty(SharedProperties.PRIMS, prims);
+						bgWorker.setSharedProperty(SharedProperties.WORKER_ID,	creationId);
+						bgWorker.setSharedProperty(SharedProperties.RX_CH, txCh);
+						
+						trace('	bgWorker', creationId, SharedProperties.RX_CH, txCh);
+
+						txChannels[creationId] = txCh;
+
+						handleExitFrame();
+
+						setTimeout(
+							function():void
+							{
+								trace('	workerLoadComplete	bgWorker:',creationId,' is starting','	timer:', getTimer());
+								bgWorker.start();
+								trace('	workerLoadComplete	bgWorker:',creationId,' was started','	timer:', getTimer());
+							},
+							100 * creationId + 100
+						);
+					}
 				}
-			}
-			
-			private function createBackgroundWorker(bgWorkerBytes:ByteArray, creationId:uint):void
-			{
-				trace('workerLoadComplete	bgWorker init    ','	timer:', getTimer());
-				const bgWorker:Worker = WorkerDomain.current.createWorker(bgWorkerBytes);
-				const txCh:MessageChannel = Worker.current.createMessageChannel(bgWorker);
-				
-				bgWorker.addEventListener(Event.WORKER_STATE, handleBgWorkerState, false, 0, true);
-				bgWorker.setSharedProperty('prims', prims);
-				bgWorker.setSharedProperty('workerId',	creationId);
-				bgWorker.setSharedProperty('rxChannel' + creationId, txCh);
-				
-				trace('workerLoadComplete	bgWorker starting','	timer:', getTimer());
-				bgWorker.start();
-				trace('workerLoadComplete	bgWorker started ','	timer:', getTimer());
-				
-				handleExitFrame()
-			}
+			).call(this);
 			
 			private function handleBgWorkerState(event:Event):void
 			{
 				const w:Worker = Worker(event.target);
 				trace('		handleBgWorkerState',event.type, w.state,'	timer:', getTimer());
 				trace('		list workers:', WorkerDomain.current.listWorkers());
-				trace('		list prims:');
-				trace(w.getSharedProperty('prims'));
+				trace('		list prims:',w.getSharedProperty(SharedProperties.PRIMS));
+				
+				const rxCh:MessageChannel = w.getSharedProperty(SharedProperties.RX_CH);
+				rxChannels[w.getSharedProperty(SharedProperties.WORKER_ID)] = rxCh;
+				
+				try{
+					rxCh.addEventListener(Event.CHANNEL_MESSAGE, handleChannelMSG, false, 0, true);
+				}
+				catch(e:Error)
+				{
+					trace(e.message,'\n',e.getStackTrace());
+				}
+				w.setSharedProperty(SharedProperties.RX_CH, undefined);
+				w.setSharedProperty(SharedProperties.PRIMS, undefined);
+				w.setSharedProperty(SharedProperties.WORKER_ID, undefined);
+			}
+			
+			private function handleChannelMSG(e:Event):void
+			{
+				trace('		handleChannelMSG',e.target);
+				const msg:Object = MessageChannel(e.target).receive();
+				trace('		handleChannelMSG', msg);
+				
+				try{
+					if (msg is String)
+						this[msg].call(this);
+				}
+				catch(e:Error)
+				{
+					trace(e.message,'\n',e.getStackTrace());
+				}
 			}
 			
 			private function handleExitFrame(event:Event = null):void
@@ -182,26 +270,6 @@
 				list.dataProvider = new VectorPrimList(primData);
 			}
 			
-			private function createWorker():void
-			{
-				// create the background worker
-				trace('createWorker', this.loaderInfo);
-				if (!this.loaderInfo)
-					return;
-				const workerBytes:ByteArray = this.loaderInfo.bytes;
-				//const workerBytes:ByteArray = new BgWorkerPrimFinder()// as ByteArray;
-				var bgWorker:Worker = WorkerDomain.current.createWorker(workerBytes);
-				
-				// listen for worker state changes to know when the worker is running
-				bgWorker.addEventListener(Event.WORKER_STATE, workerStateHandler);
-				
-				// set up communication between workers using 
-				// setSharedProperty(), createMessageChannel(), etc.
-				// ... (not shown)
-				
-				bgWorker.start();
-			}
-			
 			private function workerStateHandler(event:Event):void
 			{
 				trace(event.type);
@@ -243,9 +311,4 @@
 			</fx:Component>
 		</s:itemRenderer>
 	</s:List>
-
-	<fx:Style>
-		@namespace s "library://ns.adobe.com/flex/spark";
-		
-	</fx:Style>
 </s:Application>

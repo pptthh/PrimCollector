@@ -65,13 +65,12 @@ package org.code.workers
 				{
 					var  txCh:MessageChannel = Worker.current.createMessageChannel(mainWorker);
 					
-					Worker.current.setSharedProperty(SharedProperties.MRX_CH, txCh);
-					
 					if (txCh.state == MessageChannelState.CLOSED)
 						continue;
-					return txCh;
+					break;
 				}
-				throw new Error(MessageChannelState.CLOSED);
+				Worker.current.setSharedProperty(SharedProperties.MRX_CH, txCh);
+				return txCh
 			}
 		).call(this);
 		

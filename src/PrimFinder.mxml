@@ -20,7 +20,7 @@
 			import org.code.vo.list.VectorPrimList;
 			import org.code.workers.SharedProperties;
 			
-			private static const NO_OF_BG_WORKERS:uint = 20;
+			private static const NO_OF_BG_WORKERS:uint = 59;
 			
 			private const txChannels:Vector.<MessageChannel> = new Vector.<MessageChannel>(NO_OF_BG_WORKERS,true);
 			private const rxChannels:Vector.<MessageChannel> = new Vector.<MessageChannel>(NO_OF_BG_WORKERS,true);
@@ -136,13 +136,14 @@
 			private function handleBgWorkerState(event:Event):void
 			{
 				const w:Worker = Worker(event.target);
+				
+				if (!w.getSharedProperty(SharedProperties.MRX_CH))
+					return callLater(handleBgWorkerState, [event]);
+				
 				trace('		handleBgWorkerState',event.type, w.state,'	timer:', getTimer());
 				trace('		list workers:', WorkerDomain.current.listWorkers());
 				trace('		list prims:',w.getSharedProperty(SharedProperties.PRIMS));
 				trace('		list rxCh:',w.getSharedProperty(SharedProperties.MRX_CH));
-				
-				if (!w.getSharedProperty(SharedProperties.MRX_CH))
-					return callLater(handleBgWorkerState, [event]);
 				
 				const rxCh:MessageChannel = w.getSharedProperty(SharedProperties.MRX_CH);
 				rxChannels[w.getSharedProperty(SharedProperties.WORKER_ID)] = rxCh;
@@ -170,20 +171,22 @@
 				
 			}
 			
-			private function handleChannelMSG(e:Event):void
+			private function handleChannelMSG(event:Event):void
 			{
-				trace('		handleChannelMSG',e.target);
-				const msg:Object = MessageChannel(e.target).receive();
-				trace('		handleChannelMSG', msg);
-				
+				const rxCh:MessageChannel = MessageChannel(event.target);
 				try{
-					if (msg is String)
+					const msg:Object = rxCh.receive();
+					if (msg is String && this.hasOwnProperty(msg))
 						this[msg].call(this);
+//					else
+//						trace('		mainWorker chMessage:	', msg);
 				}
 				catch(e:Error)
 				{
-					//trace(e.message,'\n',e.getStackTrace());
+					trace(e.message,'\n',e.getStackTrace());
 				}
+				
+				txChannels[rxChannels.indexOf(rxCh)].send('start');
 			}
 			
 			private function handleExitFrame(event:Event = null):void

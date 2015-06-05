@@ -40,6 +40,7 @@
   </applications>
   <modules/>
   <workers managerFilePath="src/Workers.as">
+    <worker embed="false" path="src/org/code/workers/PrimFinderWorker.as"/>
     <worker embed="false" path="src/org/code/workers/WorkerTest.as"/>
   </workers>
   <buildCSSFiles/>

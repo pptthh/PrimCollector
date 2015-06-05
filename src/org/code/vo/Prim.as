@@ -3,7 +3,6 @@ package org.code.vo
 	import flash.events.EventDispatcher;
 	import flash.utils.getTimer;
 
-	[Bindable]
 	public class Prim extends EventDispatcher
 	{
 		public static var prevMaxDistance:uint;

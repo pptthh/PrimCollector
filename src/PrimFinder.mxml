@@ -18,9 +18,15 @@
 			
 			import org.code.vo.Prim;
 			import org.code.vo.list.VectorPrimList;
+			import org.code.workers.PrimFinderWorker;
 			import org.code.workers.SharedProperties;
+			import org.code.workers.WorkerTest;
 			
-			private static const NO_OF_BG_WORKERS:uint = 189;
+			private static const NO_OF_BG_WORKERS:uint = 1;
+			
+			private static const WORKER_PATH:String = 'org/code/workers/';
+			private static const FILE_EXTENSION:String = '.swf';
+				
 			
 			private const txChannels:Vector.<MessageChannel> = new Vector.<MessageChannel>(NO_OF_BG_WORKERS,true);
 			private const rxChannels:Vector.<MessageChannel> = new Vector.<MessageChannel>(NO_OF_BG_WORKERS,true);
@@ -69,13 +75,72 @@
 					
 					workerLoader.load(
 						new URLRequest(
-							"org/code/workers/WorkerTest.swf"
+							WORKER_PATH + WorkerTest.NAME + FILE_EXTENSION
+						)
+					);
+					
+					const pfWorkerLoader:URLLoader = new URLLoader();
+					pfWorkerLoader.dataFormat = URLLoaderDataFormat.BINARY;
+					
+					pfWorkerLoader.addEventListener(Event.COMPLETE, pfWorkerLoadComplete, false, 0, true);
+					pfWorkerLoader.addEventListener(IOErrorEvent.IO_ERROR, pfWorkerLoadComplete, false, 0, true);
+					
+					pfWorkerLoader.load(
+						new URLRequest(
+							WORKER_PATH + PrimFinderWorker.NAME + FILE_EXTENSION
 						)
 					);
 					
 					return true;
 				}
 			).call(this);
+			
+			private function pfWorkerLoadComplete(event:Event):void
+			{
+				if (event.type === IOErrorEvent.IO_ERROR)
+					return trace('failed to load pfWorkerLoadComplete');
+				
+				const bgWorkerBytes:ByteArray = event.target.data;
+				
+				for (var i:uint = 0; i < PrimFinder.NO_OF_BG_WORKERS; ++ i)
+					createBackgroundPFWorker(bgWorkerBytes, i);
+			}
+			
+			private const mainW2BgWChs:Vector.<MessageChannel> = new Vector.<MessageChannel>(NO_OF_BG_WORKERS,true);
+			private const bgW2MainWChs:Vector.<MessageChannel> = new Vector.<MessageChannel>(NO_OF_BG_WORKERS,true);
+			
+			private function createBackgroundPFWorker(bgWorkerBytes:ByteArray, index:uint):void
+			{
+				const bgWorker:Worker = WorkerDomain.current.createWorker(bgWorkerBytes);
+				
+				const mainW2BgWCh:MessageChannel = Worker.current.createMessageChannel(bgWorker);
+				const bgW2MainWCh:MessageChannel = bgWorker.createMessageChannel(Worker.current);
+
+				mainW2BgWChs[index] = mainW2BgWCh;
+				bgW2MainWChs[index] = bgW2MainWCh;
+				
+				bgWorker.setSharedProperty(SharedProperties.MAIN_2_BG_CH,	mainW2BgWCh);
+				bgWorker.setSharedProperty(SharedProperties.BG_2_MAIN_CH,	bgW2MainWCh);
+				
+				bgWorker.addEventListener(Event.WORKER_STATE, handleBgWorkerState, false, 0, true);
+				mainW2BgWCh.addEventListener(Event.CHANNEL_STATE, handlePFstateChange, false, 0, true);
+				bgW2MainWCh.addEventListener(Event.CHANNEL_STATE, handlePFstateChange, false, 0, true);
+				bgW2MainWCh.addEventListener(Event.CHANNEL_MESSAGE, handlePFmsg, false, 0, true);
+				
+				bgWorker.start();
+				
+				mainW2BgWCh.send('\t' + index + '	ready?');
+			}
+			
+			private function handlePFmsg(event:Event):void
+			{
+				trace(MessageChannel(event.target).receive());
+			}
+			
+			private function handlePFstateChange(event:Event):void
+			{
+				trace(MessageChannel(event.target).state);
+			}
 			
 			private function workerLoadComplete(event:Event):void
 			{
@@ -248,6 +313,7 @@
 			{
 				trace(event.type);
 			}
+			
 		]]>
 	</fx:Script>
 

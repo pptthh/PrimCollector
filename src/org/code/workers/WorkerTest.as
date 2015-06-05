@@ -10,10 +10,10 @@ package org.code.workers
 	import flash.utils.Timer;
 	import flash.utils.getTimer;
 	
-	trace('worker pre-init');	
-	
 	public class WorkerTest extends Sprite
 	{
+		public static const NAME:String = 'WorkerTest';
+
 		private function log(...args):void
 		{
 			trace('		worker:',ID,args.join(','));

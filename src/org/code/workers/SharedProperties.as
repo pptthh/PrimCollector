@@ -1,8 +1,5 @@
 package org.code.workers
 {
-	import flash.system.MessageChannel;
-	import flash.system.Worker;
-
 	public final class SharedProperties
 	{
 		public function SharedProperties(){}
@@ -13,6 +10,7 @@ package org.code.workers
 		public static const WORKER_ID:String = 'workerId';
 //		public static const Z_PROP_TEST:String = 'zPropTest';
 		
+		public static const SHARED_MEMORY:String = 'SharedMemory';
 		public static const MAIN_2_BG_CH:String = 'mainToBackgroundChannel';
 		public static const BG_2_MAIN_CH:String = 'backgroundToMainChannel';
 	}

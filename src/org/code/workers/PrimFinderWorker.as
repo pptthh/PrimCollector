@@ -4,7 +4,7 @@ package org.code.workers
 	import flash.events.Event;
 	import flash.system.MessageChannel;
 	import flash.system.Worker;
-	import flash.utils.flash_proxy;
+	import flash.utils.ByteArray;
 	
 	public class PrimFinderWorker extends Sprite
 	{
@@ -12,6 +12,7 @@ package org.code.workers
 		
 		private const mainW2BgWCh:MessageChannel = Worker.current.getSharedProperty(SharedProperties.MAIN_2_BG_CH);
 		private const bgW2MainWCh:MessageChannel = Worker.current.getSharedProperty(SharedProperties.BG_2_MAIN_CH);
+		private const memory:ByteArray = Worker.current.getSharedProperty(SharedProperties.SHARED_MEMORY);
 		
 		public function PrimFinderWorker()
 		{

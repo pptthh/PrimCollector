@@ -22,12 +22,21 @@
 			import org.code.workers.SharedProperties;
 			import org.code.workers.WorkerTest;
 			
-			private static const NO_OF_BG_WORKERS:uint = 1;
+			private static const MEMORY:ByteArray = (
+				function ():ByteArray
+				{
+					const memory:ByteArray = new ByteArray();
+					memory.shareable = true;
+					memory.clear();
+					return memory;
+				}
+			).call();
+			
+			private static const NO_OF_BG_WORKERS:uint = 7;
 			
 			private static const WORKER_PATH:String = 'org/code/workers/';
 			private static const FILE_EXTENSION:String = '.swf';
 				
-			
 			private const txChannels:Vector.<MessageChannel> = new Vector.<MessageChannel>(NO_OF_BG_WORKERS,true);
 			private const rxChannels:Vector.<MessageChannel> = new Vector.<MessageChannel>(NO_OF_BG_WORKERS,true);
 
@@ -121,6 +130,7 @@
 				
 				bgWorker.setSharedProperty(SharedProperties.MAIN_2_BG_CH,	mainW2BgWCh);
 				bgWorker.setSharedProperty(SharedProperties.BG_2_MAIN_CH,	bgW2MainWCh);
+				bgWorker.setSharedProperty(SharedProperties.SHARED_MEMORY,	MEMORY);
 				
 				bgWorker.addEventListener(Event.WORKER_STATE, handleBgWorkerState, false, 0, true);
 				mainW2BgWCh.addEventListener(Event.CHANNEL_STATE, handlePFstateChange, false, 0, true);

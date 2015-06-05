@@ -16,7 +16,7 @@ package org.code.workers
 	{
 		private function log(...args):void
 		{
-//			trace('		worker:',ID,args.join(','));
+			trace('		worker:',ID,args.join(','));
 		}
 		
 		public function WorkerTest()
@@ -29,9 +29,32 @@ package org.code.workers
 
 			rxCh.addEventListener(Event.CHANNEL_MESSAGE, handleChannelMSG, false, 0, true);
 			
+			terminateIfClosed();
+			txCh.addEventListener(Event.CHANNEL_STATE, handleChannelState, false, 0, true);
 			txCh.send('worker ' + ID +'	'+ counter);
 			if (txCh.state == MessageChannelState.CLOSED)
 				trace(MessageChannelState.CLOSED);
+		}
+		
+		private function handleChannelState(event:Event):void
+		{
+			const s:String = txCh.state;
+			log(event.type, s, txCh.state);
+			terminateIfClosed();
+		}
+		
+		private function terminateIfClosed():void
+		{
+			if (txCh.state == MessageChannelState.CLOSING ||
+				txCh.state == MessageChannelState.CLOSED)
+				terminate();
+		}
+		
+		private function terminate():void
+		{
+			trace('	Worker.current.terminate because:',txCh.state, 'ID:',ID);
+			Worker.current.terminate();
+			trace('	Worker.current.terminated');
 		}
 		
 		private const mainWorker:Worker = Worker(
@@ -77,20 +100,21 @@ package org.code.workers
 		private function start():void
 		{
 			timer.start();
-			log('	start');
+//			log('	start');
 			//txCh.send('worker-' + ID + ' is ready');
 		}
 		
 		private function stop():void
 		{
 			timer.stop()
-			log('	stop');
+//			log('	stop');
 		}
 		
 		private function handleTimerEvent(e:Event):void
 		{
+			terminateIfClosed();
 			txCh.send('worker ' + ID +'	'+ counter);
-			log('	handleTimerEvent:', counter++);
+			//log('	handleTimerEvent:', counter++);
 			stop();
 		}
 		

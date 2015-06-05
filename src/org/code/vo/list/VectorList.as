@@ -30,8 +30,10 @@ package org.code.vo.list
 		public function removeItemAt(index:int):Object
 		{
 			const olditem:* = list[index];
+			has
 			list.splice(index,1);
 			return olditem;
+			
 		}
 		
 		public function setItemAt(item:Object, index:int):Object

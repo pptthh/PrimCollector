@@ -6,6 +6,8 @@ package org.code.workers
 	import flash.system.Worker;
 	import flash.utils.ByteArray;
 	
+	import org.code.vo.Prim;
+	
 	public class PrimFinderWorker extends Sprite
 	{
 		public static const NAME:String = 'PrimFinderWorker';
@@ -26,15 +28,54 @@ package org.code.workers
 		
 		private function handleStateCh(event:Event):void
 		{
-			trace('		handleStateCh');
+			trace('		handleStateCh', MessageChannel(event.target).state);
 		}
 		
 		private function handleMSG(event:Event):void
 		{
-			const data:String = MessageChannel(event.target).receive() as String;
+			const data:Object = MessageChannel(event.target).receive();
 			trace('		handleMSG', data);
-			if (data.lastIndexOf('ready?') >= 0)
-				return bgW2MainWCh.send('ready!');
+			
+			if (data is uint)
+				return bgW2MainWCh.send(
+					isPrim(data as uint) ?
+						data
+						null
+				);
+			
+			if (data == Messages.R_U_READY)
+				return bgW2MainWCh.send(true);
+		}
+		
+		private function isPrim(x:uint):void
+		{
+			const sqX:uint = Math.floor(Math.sqrt(x));
+			const prims:Vector.<uint> = this.prims;
+			var i:uint = 1;
+			while (
+				i < sqX &&
+				x % prims[i] != 0
+			)
+				++ i;
+			if (i >= sqX)
+			{
+				i = primData.length;
+				prims.push(x);
+				trace(
+					'	i:',i,
+					'		v:',x,
+					'		d',x - Prim(primData[i - 1]).value - 1,
+					'		x',Prim.prevMaxDistance,
+					'		c',Prim.prevMaxDistanceCount
+				); 
+				primData.push(
+					new Prim(
+						i,
+						x, 
+						x - primData[i - 1].value - 1
+					)
+				);
+			}
 		}
 	}
 }

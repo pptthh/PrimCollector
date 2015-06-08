@@ -18,6 +18,7 @@
 			
 			import org.code.vo.Prim;
 			import org.code.vo.list.VectorPrimList;
+			import org.code.workers.Messages;
 			import org.code.workers.PrimFinderWorker;
 			import org.code.workers.SharedProperties;
 			import org.code.workers.WorkerTest;
@@ -139,12 +140,13 @@
 				
 				bgWorker.start();
 				
-				mainW2BgWCh.send('\t' + index + '	ready?');
+				mainW2BgWCh.send(Messages.R_U_READY);
 			}
 			
 			private function handlePFmsg(event:Event):void
 			{
 				trace(MessageChannel(event.target).receive());
+				
 			}
 			
 			private function handlePFstateChange(event:Event):void

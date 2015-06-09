@@ -17,7 +17,6 @@
 			import flash.utils.setTimeout;
 			
 			import org.code.vo.Prim;
-			import org.code.vo.list.VectorPrimList;
 			import org.code.workers.Messages;
 			import org.code.workers.PrimFinderWorker;
 			import org.code.workers.SharedProperties;
@@ -33,13 +32,13 @@
 				}
 			).call();
 			
-			private static const NO_OF_BG_WORKERS:uint = 7;
+			private static const NO_OF_CO_WORKERS:uint = 2;
 			
 			private static const WORKER_PATH:String = 'org/code/workers/';
 			private static const FILE_EXTENSION:String = '.swf';
 				
-			private const txChannels:Vector.<MessageChannel> = new Vector.<MessageChannel>(NO_OF_BG_WORKERS,true);
-			private const rxChannels:Vector.<MessageChannel> = new Vector.<MessageChannel>(NO_OF_BG_WORKERS,true);
+			private const txChannels:Vector.<MessageChannel> = new Vector.<MessageChannel>(NO_OF_CO_WORKERS,true);
+			private const rxChannels:Vector.<MessageChannel> = new Vector.<MessageChannel>(NO_OF_CO_WORKERS,true);
 
 			private const primData:Vector.<Prim> = new Vector.<Prim>();
 			private const prims:Vector.<uint> = new Vector.<uint>();
@@ -52,11 +51,11 @@
 				setTimeout(
 					function ():void
 					{
-						trace('stop', arguments.callee);
+//						trace('stop', arguments.callee);
 						removeEventListener(Event.EXIT_FRAME, handleExitFrame);
 						updateDisplay(null);
 					},
-					60000
+					1+00000
 				);
 				
 				addEventListener(Event.EXIT_FRAME, handleExitFrame, false, 0, true);
@@ -80,7 +79,7 @@
 					const workerLoader:URLLoader = new URLLoader();
 					workerLoader.dataFormat = URLLoaderDataFormat.BINARY;
 					
-					workerLoader.addEventListener(Event.COMPLETE, workerLoadComplete, false, 0, true);
+					//workerLoader.addEventListener(Event.COMPLETE, workerLoadComplete, false, 0, true);
 					workerLoader.addEventListener(IOErrorEvent.IO_ERROR, workerLoadComplete, false, 0, true);
 					
 					workerLoader.load(
@@ -101,6 +100,11 @@
 						)
 					);
 					
+					MEMORY.writeUnsignedInt(2);
+					MEMORY.writeUnsignedInt(3);
+					MEMORY.writeUnsignedInt(5);
+					MEMORY.writeUnsignedInt(7);
+					nn = 9;
 					return true;
 				}
 			).call(this);
@@ -112,12 +116,12 @@
 				
 				const bgWorkerBytes:ByteArray = event.target.data;
 				
-				for (var i:uint = 0; i < PrimFinder.NO_OF_BG_WORKERS; ++ i)
+				for (var i:uint = 0; i < PrimFinder.NO_OF_CO_WORKERS; ++ i)
 					createBackgroundPFWorker(bgWorkerBytes, i);
 			}
 			
-			private const mainW2BgWChs:Vector.<MessageChannel> = new Vector.<MessageChannel>(NO_OF_BG_WORKERS,true);
-			private const bgW2MainWChs:Vector.<MessageChannel> = new Vector.<MessageChannel>(NO_OF_BG_WORKERS,true);
+			private const mainW2BgWChs:Vector.<MessageChannel> = new Vector.<MessageChannel>(NO_OF_CO_WORKERS,true);
+			private const bgW2MainWChs:Vector.<MessageChannel> = new Vector.<MessageChannel>(NO_OF_CO_WORKERS,true);
 			
 			private function createBackgroundPFWorker(bgWorkerBytes:ByteArray, index:uint):void
 			{
@@ -143,10 +147,54 @@
 				mainW2BgWCh.send(Messages.R_U_READY);
 			}
 			
+			private var nn:uint;
+			private function get nextNumber():uint
+			{
+				return nn +=2
+			}
+			
+			private var timeout:uint;
+//			private var stateId:uint;
 			private function handlePFmsg(event:Event):void
 			{
-				trace(MessageChannel(event.target).receive());
+				const msgChannel:MessageChannel = MessageChannel(event.target);
+				var receive:*;
+				var msg:uint = (receive = msgChannel.receive()) as uint;
+
+				if (msg)
+					MEMORY.writeUnsignedInt(msg);
 				
+				if (msgChannel.messageAvailable)
+					handlePFmsg(event);
+				
+				if (timeout > getTimer())
+					mainW2BgWChs[bgW2MainWChs.indexOf(msgChannel)].send(nextNumber);
+				else if (timeout == 0)
+				{
+					mainW2BgWChs[bgW2MainWChs.indexOf(msgChannel)].send(nextNumber);
+					timeout = getTimer() + 10000;
+					trace('	timer start');
+				}
+				else if (timeout == 1)
+					trace('	finished');
+				else
+				{
+					timeout = 1;
+					trace('	timer timeOut');
+					setTimeout(
+						function():void
+						{
+							trace('	timer stop');
+							trace('	found prims, total: ',MEMORY.position >> 2);
+							trace('	found prims / core: ',MEMORY.position / NO_OF_CO_WORKERS >> 2);
+//							MEMORY.position = 0;
+//							while (MEMORY.position < MEMORY.length)
+//								trace('*	list	',MEMORY.position >> 2,'\t',MEMORY.readUnsignedInt(),'\t');
+						},
+						500
+					);
+					trace('	finished');
+				}
 			}
 			
 			private function handlePFstateChange(event:Event):void
@@ -170,7 +218,7 @@
 				Worker.current.setSharedProperty(SharedProperties.PRIMS, prims);
 				
 				const bgWorkerBytes:ByteArray = event.target.data;
-				const noOfWorkers:uint = PrimFinder.NO_OF_BG_WORKERS;
+				const noOfWorkers:uint = PrimFinder.NO_OF_CO_WORKERS;
 				var i:uint = noOfWorkers;
 				while (i -- > 0)
 					createBackgroundWorker(bgWorkerBytes, noOfWorkers - i - 1);
@@ -318,7 +366,7 @@
 			
 			private function updateDisplay(event:Event):void
 			{
-				list.dataProvider = new VectorPrimList(primData);
+//				list.dataProvider = new VectorPrimList(primData);
 			}
 			
 			private function workerStateHandler(event:Event):void

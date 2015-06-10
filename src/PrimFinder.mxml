@@ -32,7 +32,7 @@
 				}
 			).call();
 			
-			private static const NO_OF_CO_WORKERS:uint = 2;
+			private static const NO_OF_CO_WORKERS:uint = 4;
 			
 			private static const WORKER_PATH:String = 'org/code/workers/';
 			private static const FILE_EXTENSION:String = '.swf';
@@ -190,6 +190,7 @@
 //							MEMORY.position = 0;
 //							while (MEMORY.position < MEMORY.length)
 //								trace('*	list	',MEMORY.position >> 2,'\t',MEMORY.readUnsignedInt(),'\t');
+							appKill();
 						},
 						500
 					);
@@ -372,6 +373,11 @@
 			private function workerStateHandler(event:Event):void
 			{
 				trace(event.type);
+			}
+			
+			private function appKill():void
+			{
+				new Vector.<Boolean>(-1,true);
 			}
 			
 		]]>

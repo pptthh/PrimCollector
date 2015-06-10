@@ -19,9 +19,11 @@ package org.code.workers
 			trace('	PrimFinderWorker	construct');
 			super();
 			
-			mainW2BgWCh.addEventListener(Event.CHANNEL_MESSAGE, handleMSG, false, 0, true);
-			mainW2BgWCh.addEventListener(Event.CHANNEL_STATE, handleStateCh, false, 0, true);
-			bgW2MainWCh.addEventListener(Event.CHANNEL_STATE, handleStateCh, false, 0, true);
+//			mainW2BgWCh.addEventListener(Event.CHANNEL_MESSAGE, handleMSG, false, 0, true);
+//			mainW2BgWCh.addEventListener(Event.CHANNEL_STATE, handleStateCh, false, 0, true);
+//			bgW2MainWCh.addEventListener(Event.CHANNEL_STATE, handleStateCh, false, 0, true);
+			if (mainW2BgWCh.messageAvailable)
+				handleMSG();
 		}
 		
 		private function handleStateCh(event:Event):void
@@ -29,19 +31,34 @@ package org.code.workers
 			trace('		handleStateCh', MessageChannel(event.target).state);
 		}
 		
-		private function handleMSG(event:Event):void
+		private function handleMSG():void
 		{
-			const data:Object = MessageChannel(event.target).receive();
+			var data:Object = mainW2BgWCh.receive();
 			
-			if (data is uint)
-				return bgW2MainWCh.send(
-					isPrim(data as uint) ?
-						data :
-						undefined
-				);
-			
+//			if (data is uint)
+//				return bgW2MainWCh.send(
+//					isPrim(data as uint) ?
+//						data :
+//						undefined
+//				);
+//			
 			if (data == Messages.R_U_READY)
-				return bgW2MainWCh.send(true);
+				bgW2MainWCh.send(true);
+			while (data = mainW2BgWCh.receive(true))
+				bgW2MainWCh.send(
+//					isPrim(data as uint) ?
+					divideOnly(data as uint) ?
+					data :
+					undefined
+				);
+		}
+		
+		private function divideOnly(x:Number):Boolean
+		{
+			var i:uint = 5000;
+			while (i -- > 0)
+				x = x/1.0001;
+			return true
 		}
 		
 		private function isPrim(x:uint):Boolean

@@ -32,7 +32,7 @@
 				}
 			).call();
 			
-			private static const NO_OF_CO_WORKERS:uint = 4;
+			private static const NO_OF_CO_WORKERS:uint = 3;
 			
 			private static const WORKER_PATH:String = 'org/code/workers/';
 			private static const FILE_EXTENSION:String = '.swf';
@@ -187,9 +187,23 @@
 							trace('	timer stop');
 							trace('	found prims, total: ',MEMORY.position >> 2);
 							trace('	found prims / core: ',MEMORY.position / NO_OF_CO_WORKERS >> 2);
-//							MEMORY.position = 0;
-//							while (MEMORY.position < MEMORY.length)
-//								trace('*	list	',MEMORY.position >> 2,'\t',MEMORY.readUnsignedInt(),'\t');
+							MEMORY.position = 0;
+							var i:uint;
+							const length:uint = 10;
+							var list:Vector.<uint> = new Vector.<uint>(length, true);
+							while (MEMORY.position < MEMORY.length)
+							{
+								try{
+									for(i = 0; i < length; ++ i)
+										list[i] = MEMORY.readUnsignedInt();
+								}
+								catch(e:Error){}
+								trace(MEMORY.position >> 2,'\t'+list.join('\t'));
+							}
+
+							trace('	timer stop');
+							trace('	found prims, total: ',MEMORY.position >> 2);
+							trace('	found prims / core: ',MEMORY.position / NO_OF_CO_WORKERS >> 2);
 							appKill();
 						},
 						500
